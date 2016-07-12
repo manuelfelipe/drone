@@ -134,9 +134,9 @@ func (bs *BitbucketServer) Repo(u *model.User, owner, name string) (*model.Repo,
 
 	client := NewClientWithToken(&bs.Consumer, u.Token)
 
-	url := fmt.Sprintf("%s/rest/api/1.0/projects/%s/repos/%s",bs.URL,owner,name)
-	log.Info("Trying to get " + url)
-	response, err := client.Get(url)
+	api_url := fmt.Sprintf("%s/rest/api/1.0/projects/%s/repos/%s",bs.URL,owner,name)
+	log.Info("Trying to get " + api_url)
+	response, err := client.Get(api_url)
 	if err != nil {
 		log.Error(err)
 	}
@@ -150,7 +150,14 @@ func (bs *BitbucketServer) Repo(u *model.User, owner, name string) (*model.Repo,
 
 	for _, item := range bsRepo.Links.Clone {
 		if item.Name == "http" {
-			cloneLink = item.Href
+			clone_url, err := url.Parse(item.Href)
+
+			if err != nil {
+				log.Fatalln("unable to parse remote dsn. %s", err)
+			}
+			
+			clone_url.User = url.UserPassword(bs.GitUserName, "")
+			cloneLink = clone_url.String()
 		}
 	}
 	for _, item := range bsRepo.Links.Self {
